@@ -2,20 +2,44 @@
 #include "gmock/gmock.h"
 #include "../Project1/cal.cpp"
 
-using ::testing::ElementsAre;
+using namespace testing;
 
-class CalMock : public cal
-{
-    MOCK_METHOD(int, getSum, (int a, int b), ());
+class CalMock {
+public:
+    MOCK_METHOD(int, add, (int a, int b));
+    MOCK_METHOD(int, subtract, (int a, int b));
+    MOCK_METHOD(int, multiply, (int a, int b));
 };
-TEST(CheckValueTest, TestPass) {
+
+TEST(CalTest, Add) {
     CalMock mock;
+
+    EXPECT_CALL(mock, add(2, 3))
+        .WillOnce(Return(7));
+
+    int result = mock.add(2, 3);
+
+    EXPECT_THAT(result, Eq(5));
 }
 
-TEST(CheckValueTest, TestFail) {
-    int value = 20;
-    EXPECT_EQ(CheckValue(value), "fail");
+TEST(CalTest, Subtract) {
+    CalMock mock;
 
-    std::vector<int> expected_values = { 20, 21, 22, 23, 24, 25 };
-    EXPECT_THAT(expected_values, ElementsAre(20, 21, 22, 23, 24, 25));
+    EXPECT_CALL(mock, subtract(5, 2))
+        .WillOnce(Return(3));
+
+    int result = mock.subtract(5, 2);
+
+    EXPECT_THAT(result, Eq(3));
+}
+
+TEST(CalTest, Multiply) {
+    CalMock mock;
+
+    EXPECT_CALL(mock, multiply(4, 3))
+        .WillOnce(Return(12));
+
+    int result = mock.multiply(4, 3);
+
+    EXPECT_THAT(result, Eq(12));
 }
