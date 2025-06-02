@@ -1,0 +1,44 @@
+info:
+  title: 샘플 API
+  version: 1.0.0
+openapi: 3.0.0
+paths:
+  /items:
+    post:
+      operationId: createItem
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  description: 아이템 이름
+                  type: string
+                price:
+                  description: 아이템 가격
+                  type: number
+              required:
+              - name
+              - price
+              type: object
+        required: true
+      responses:
+        '201':
+          description: 생성됨
+      summary: 아이템 생성
+  /users/{userId}:
+    get:
+      operationId: getUserById
+      parameters:
+      - description: 조회할 사용자의 ID
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: 성공
+      summary: 사용자 정보 조회
+servers:
+- url: http://localhost:8000/api/v1
