@@ -5,3 +5,4 @@ openai
 pyyaml
 jsonschema
 httpx
+aiofiles

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM API 자동화 에이전트</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        /* --- 기본 & 리셋 --- */
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: #F5F5F0;
+            color: #333333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* --- 챗 컨테이너 --- */
+        .chat-container {
+            width: 100%;
+            max-width: 700px;
+            background-color: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.07);
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+            max-height: 800px;
+            overflow: hidden;
+        }
+
+        /* --- 챗 헤더 --- */
+        .chat-header {
+            padding: 22px 25px;
+            border-bottom: 1px solid #EDEAE2;
+            background-color: #FCFBF8;
+        }
+        .chat-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #2C2C2C;
+            font-weight: 600;
+        }
+
+        /* --- 메시지 영역 --- */
+        .chat-messages-wrapper {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 25px;
+            background-color: #FFFFFF;
+        }
+        .messages-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message-item {
+            padding: 12px 18px;
+            border-radius: 20px;
+            line-height: 1.55;
+            word-wrap: break-word;
+            max-width: 78%;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.04);
+            /* animation: fadeIn 0.3s ease-out; */ /* 주석 처리 유지 */
+        }
+        /* @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } */
+
+        .message-item.user {
+            background-color: #E86A17;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 6px;
+        }
+        .message-item.assistant {
+            background-color: #F0F0F0;
+            color: #333333;
+            align-self: flex-start;
+            border-bottom-left-radius: 6px;
+        }
+        .message-item.tool-call,
+        .message-item.tool-response,
+        .message-item.error {
+            font-size: 0.88em;
+            padding: 10px 15px;
+            border-radius: 16px;
+            align-self: flex-start;
+            margin-top: 5px;
+            max-width: 90%;
+        }
+        .message-item.tool-call {
+            background-color: #FEF9E7;
+            border-left: 4px solid #F7DC6F;
+            color: #7D6608;
+        }
+        .message-item.tool-response {
+            background-color: #EAF7E3;
+            border-left: 4px solid #ABEBC6;
+            color: #1E8449;
+        }
+        .message-item.error {
+            background-color: #FDEDEC;
+            border-left: 4px solid #F5B7B1;
+            color: #A93226;
+        }
+
+        /* --- 입력 영역 --- */
+        .chat-input-area {
+            display: flex;
+            align-items: center;
+            padding: 20px 25px;
+            border-top: 1px solid #EDEAE2;
+            background-color: #FCFBF8;
+        }
+        .user-input {
+            flex-grow: 1;
+            padding: 14px 18px;
+            border: 1px solid #DDCBB8;
+            border-radius: 10px;
+            font-size: 1em;
+            color: #4A4A4A;
+            background-color: #FFFFFF;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .user-input:focus {
+            border-color: #B7906F;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(183, 144, 111, 0.15);
+        }
+        .send-button {
+            background-color: #E86A17;
+            color: white;
+            border: none;
+            padding: 12px 18px; /* 아이콘 공간 확보를 위해 패딩 약간 조정 */
+            margin-left: 12px;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            font-weight: 500;
+            box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
+            display: flex; /* 아이콘과 텍스트 정렬용 */
+            align-items: center;
+            justify-content: center;
+        }
+        .send-button svg { /* SVG 아이콘 스타일 */
+            width: 1.2em; /* 아이콘 크기 */
+            height: 1.2em;
+            fill: currentColor; /* 현재 텍스트 색상(white) 사용 */
+        }
+        .send-button span { /* 텍스트가 있다면 아이콘과의 간격 */
+             margin-left: 8px;
+        }
+        .send-button:hover {
+            background-color: #D05A10;
+            transform: translateY(-1px);
+        }
+        .send-button:active {
+            transform: translateY(0px);
+        }
+        .send-button:disabled {
+            background-color: #E0E0E0;
+            color: #9E9E9E;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* --- API Spec 정보 --- */
+        .api-spec-info {
+            text-align: center;
+            padding: 12px 0;
+            font-size: 0.8em;
+            color: #757575;
+            background-color: #F5F5F0;
+            border-top: 1px solid #EDEAE2;
+        }
+
+        /* --- 스크롤바 스타일 --- */
+        .chat-messages-wrapper::-webkit-scrollbar { width: 8px; }
+        .chat-messages-wrapper::-webkit-scrollbar-track { background: #F5F5F0; border-radius: 4px; }
+        .chat-messages-wrapper::-webkit-scrollbar-thumb { background: #DDCBB8; border-radius: 4px; }
+        .chat-messages-wrapper::-webkit-scrollbar-thumb:hover { background: #B7906F; }
+
+    </style>
+</head>
+<body>
+    <div class="chat-container" id="chatContainer">
+        <header class="chat-header">
+            <h2>LLM API 에이전트</h2>
+        </header>
+        <div class="chat-messages-wrapper" id="messagesWrapper">
+            <ul class="messages-list" id="messages"></ul>
+        </div>
+        <footer class="chat-input-area" id="inputArea">
+            <input type="text" class="user-input" id="userInput" placeholder="메시지를 입력하세요..." autocomplete="off">
+            <button class="send-button" id="sendButton" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                <!-- <span>전송</span>  텍스트 없이 아이콘만 사용하거나, 필요시 추가 -->
+            </button>
+        </footer>
+        <div class="api-spec-info" id="apiSpecInfoContainer">
+            API Spec: <span id="apiSpecPathDisplay"></span>
+        </div>
+    </div>
+    <script>
+        const messagesList = document.getElementById('messages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const apiSpecPathDisplay = document.getElementById('apiSpecPathDisplay');
+        const messagesWrapper = document.getElementById('messagesWrapper');
+        let currentApiSpecPath = '';
+
+        async function loadDefaultApiSpecPath() {
+            try {
+                const response = await fetch('/default_api_spec_path');
+                if (response.ok) {
+                    const data = await response.json();
+                    currentApiSpecPath = data.path;
+                    apiSpecPathDisplay.textContent = data.path.split(/[\\/]/).pop() || data.path;
+                } else {
+                    apiSpecPathDisplay.textContent = "기본 경로 로드 실패";
+                }
+            } catch (e) { apiSpecPathDisplay.textContent = "경로 로드 중 오류"; console.error(e); }
+        }
+
+        window.onload = () => {
+            loadDefaultApiSpecPath();
+            userInput.focus();
+        };
+
+        function scrollToBottom() {
+            if(messagesWrapper) messagesWrapper.scrollTop = messagesWrapper.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const messageText = userInput.value.trim();
+            if (!messageText) return;
+
+            appendMessage(messageText, 'user');
+            userInput.value = '';
+            userInput.disabled = true;
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageText, api_spec_path: currentApiSpecPath })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    appendMessage(`오류: ${data.error_message || data.detail || response.statusText}`, 'error');
+                    return;
+                }
+
+                if (data.tool_calls_info && data.tool_calls_info.length > 0) {
+                    data.tool_calls_info.forEach(call => {
+                         appendMessage(`[도구 호출] ${call.tool_name}(${JSON.stringify(call.tool_args)})`, 'tool-call');
+                    });
+                }
+                if (data.tool_responses_info && data.tool_responses_info.length > 0) {
+                     data.tool_responses_info.forEach(resp => {
+                         let content = `[도구 응답] ${resp.tool_name}: `;
+                         if(resp.error) content += `오류(${resp.error}) - ${JSON.stringify(resp.response_data)}`;
+                         else content += JSON.stringify(resp.response_data);
+                         appendMessage(content, resp.error ? 'error' : 'tool-response');
+                    });
+                }
+                if (data.final_response) {
+                    appendMessage(data.final_response, 'assistant');
+                } else if (data.error_message) {
+                     appendMessage(data.error_message, 'error');
+                } else if (!data.tool_calls_info && !data.tool_responses_info && !data.final_response) {
+                    appendMessage("AI로부터 응답이 없습니다.", "assistant");
+                }
+
+            } catch (error) {
+                console.error('메시지 전송/처리 중 오류:', error);
+                appendMessage('클라이언트 오류: 메시지 처리 중 문제가 발생했습니다. (' + error.message + ')', 'error');
+            } finally {
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+                scrollToBottom();
+            }
+        }
+
+        function appendMessage(text, type) {
+            const listItem = document.createElement('li');
+            listItem.className = 'message-item ' + type;
+            listItem.textContent = text;
+            messagesList.appendChild(listItem);
+            scrollToBottom();
+        }
+
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
